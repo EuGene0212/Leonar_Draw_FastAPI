@@ -5,6 +5,7 @@ import ctypes
 import pyautogui
 import time
 import math
+import pyttsx3
 
 def eye_tracker():
     # 마우스 안전모드 비활성화
@@ -47,6 +48,28 @@ def eye_tracker():
         min_detection_confidence=0.5,
         min_tracking_confidence=0.5
     )
+    
+    # pyttsx3 음성 엔진 초기화
+    engine = pyttsx3.init()
+    engine.setProperty('rate', 150)
+    
+    def speak_text(text):
+        engine.say(text)
+        engine.runAndWait()
+        
+    order_korean = {
+        "top_left": "왼쪽 위를 봐주세요.",
+        "top": "위를 봐주세요.",
+        "top_right": "오른쪽 위를 봐주세요.",
+        "left": "왼쪽을 봐주세요.",
+        "center": "중앙을 봐주세요.",
+        "right": "오른쪽을 봐주세요.",
+        "bottom_left": "왼쪽 아래를 봐주세요.",
+        "bottom": "아래를 봐주세요.",
+        "bottom_right": "오른쪽 아래를 봐주세요."
+    }
+    
+    last_spoken = None
 
     # 사용할 왼쪽 iris landmark 인덱스 (왼쪽 눈만 사용)
     LEFT_IRIS = [469, 470, 471, 472]
@@ -84,8 +107,7 @@ def eye_tracker():
     cv2.namedWindow("Calibration", cv2.WND_PROP_FULLSCREEN)
     cv2.setWindowProperty("Calibration", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
-    print("캘리브레이션을 시작합니다.") 
-    print("화면에 나타나는 기준점을 응시한 후, 스페이스바를 눌러 기록하세요.")
+    speak_text("캘리브레이션을 시작합니다. 화면에 나타나는 기준점을 응시한 후, 스페이스바를 눌러 기록하세요.") 
 
     while len(gaze_points_int) < len(order) or len(gaze_points_ext) < len(order):
         ret_int, frame_int = cap_notebook.read()
@@ -102,7 +124,6 @@ def eye_tracker():
         h_int, w_int, _ = frame_int.shape
         h_ext, w_ext, _ = frame_ext.shape
         
-        # Mediapipe 처리
         rgb_int = cv2.cvtColor(frame_int, cv2.COLOR_BGR2RGB)
         rgb_ext = cv2.cvtColor(frame_ext, cv2.COLOR_BGR2RGB)
         
@@ -141,6 +162,10 @@ def eye_tracker():
         cv2.putText(frame_int_resized, info_text, (50,50),
                     cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 2)
         cv2.imshow("Calibration", frame_int_resized)
+        
+        if last_spoken != current_label :
+            speak_text(order_korean[current_label])
+            last_spoken = current_label
         
         key = cv2.waitKey(1) & 0xFF
         # 스페이스바 입력 시, 두 캠 모두 검출된 경우에만 기록
@@ -317,7 +342,6 @@ def eye_tracker():
         _, buffer = cv2.imencode('.jpg', frame_int)
         frame_bytes = buffer.tobytes()
 
-        # multipart/x-mixed-replace 방식으로 이미지 스트리밍
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
         
