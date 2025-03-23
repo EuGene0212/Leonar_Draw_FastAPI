@@ -22,10 +22,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get('/')
-def root() :
-    return print('서버 연결 됨')
-
 @app.get('/live_stream')
 def live_stream() :
     return StreamingResponse(eye_tracker(), media_type="multipart/x-mixed-replace; boundary=frame")
